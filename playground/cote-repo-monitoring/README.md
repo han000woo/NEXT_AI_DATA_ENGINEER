@@ -5,6 +5,9 @@
 
 Vue.js 기반의 프론트엔드와 GitHub API, GitHub Actions를 활용하여  
 조직(Organization) 내 레포지토리들의 커밋 데이터를 자동으로 추적합니다.
+<p align="center">
+  <img src="./image.png" width="600" />
+</p>
 
 ---
 
