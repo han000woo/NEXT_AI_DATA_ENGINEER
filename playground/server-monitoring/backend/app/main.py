@@ -6,23 +6,67 @@ import json
 
 app = FastAPI()
 
-# React(3000번 포트)에서 오는 요청 허용
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"], 
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-def get_remote_cpu_usage(ssh):
-    """원격 서버에서 CPU 사용량을 가져오는 SSH 명령어 실행"""
-    # /proc/stat 파일을 읽어서 계산하는 방식이 가장 가볍습니다.
-    # 여기서는 데모를 위해 'top' 명령어를 간단히 파싱하거나 임의의 명령어를 씁니다.
-    # 실제로는 'grep "cpu " /proc/stat' 결과를 파싱하는 것이 정석입니다.
-    stdin, stdout, stderr = ssh.exec_command("grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'")
-    usage = stdout.read().decode().strip()
-    return usage if usage else "0"
+def get_linux_stats(ssh):
+    """원격 서버의 CPU, 메모리, 상위 프로세스, 서비스 상태 조회"""
+    stats = {}
+
+    try:
+        # 1. CPU 사용량 (grep 방식이 가장 빠름)
+        _, stdout, _ = ssh.exec_command("grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'")
+        stats['cpu'] = stdout.read().decode().strip()
+
+        # 2. 메모리 사용량 (free 명령어)
+        # 결과: total used free ...
+        _, stdout, _ = ssh.exec_command("free -m | awk 'NR==2{printf \"%.2f\", $3*100/$2 }'")
+        stats['memory'] = stdout.read().decode().strip()
+
+        # 3. CPU 많이 쓰는 Top 5 프로세스
+        # ps 명령 옵션: pid, command, %cpu, %mem (cpu 내림차순 정렬)
+        cmd_ps = "ps -Ao pid,comm,pcpu,pmem --sort=-pcpu | head -n 6"
+        _, stdout, _ = ssh.exec_command(cmd_ps)
+        process_output = stdout.read().decode().strip().split('\n')
+        
+        processes = []
+        if len(process_output) > 1:
+            for line in process_output[1:]: # 헤더 제외
+                parts = line.split()
+                if len(parts) >= 4:
+                    processes.append({
+                        "pid": parts[0],
+                        "name": parts[1],
+                        "cpu": parts[2],
+                        "mem": parts[3]
+                    })
+        stats['processes'] = processes
+
+        # 4. 주요 서비스 상태 확인 (예: docker, sshd, nginx)
+        # 원하는 서비스 목록을 배열에 넣으세요.
+        target_services = ["docker", "sshd", "nginx", "cron"]
+        service_cmd = f"systemctl is-active {' '.join(target_services)}"
+        _, stdout, _ = ssh.exec_command(service_cmd)
+        service_statuses = stdout.read().decode().strip().split('\n')
+        
+        services = []
+        for i, name in enumerate(target_services):
+            # 결과가 active면 실행중, 아니면 중지/없는 서비스
+            status = service_statuses[i] if i < len(service_statuses) else "unknown"
+            services.append({"name": name, "status": status})
+        
+        stats['services'] = services
+
+    except Exception as e:
+        print(f"Command Error: {e}")
+        return None
+
+    return stats
 
 @app.websocket("/ws/monitor")
 async def websocket_endpoint(websocket: WebSocket):
@@ -31,41 +75,28 @@ async def websocket_endpoint(websocket: WebSocket):
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
     try:
-        # 1. 초기 접속 정보 수신 (IP, User, Password)
         data = await websocket.receive_text()
-        credentials = json.loads(data)
+        creds = json.loads(data)
         
-        ip = credentials.get("ip")
-        username = credentials.get("username")
-        password = credentials.get("password")
+        ssh_client.connect(creds.get("ip"), username=creds.get("username"), password=creds.get("password"), timeout=5)
+        await websocket.send_text(json.dumps({"status": "connected"}))
 
-        # 2. SSH 연결 시도
-        try:
-            ssh_client.connect(ip, username=username, password=password, timeout=5)
-            await websocket.send_text(json.dumps({"status": "connected", "message": f"Connected to {ip}"}))
-        except Exception as e:
-            await websocket.send_text(json.dumps({"status": "error", "message": str(e)}))
-            return
-
-        # 3. 주기적으로 데이터 전송 (무한 루프)
         while True:
-            cpu_usage = get_remote_cpu_usage(ssh_client)
+            server_stats = get_linux_stats(ssh_client)
             
-            # 클라이언트로 데이터 전송
-            payload = {
-                "status": "monitoring",
-                "ip": ip,
-                "cpu": cpu_usage,
-                "timestamp": asyncio.get_event_loop().time()
-            }
-            await websocket.send_text(json.dumps(payload))
+            if server_stats:
+                payload = {
+                    "status": "monitoring",
+                    "ip": creds.get("ip"),
+                    "data": server_stats
+                }
+                await websocket.send_text(json.dumps(payload))
             
-            # 2초 대기 (비동기)
-            await asyncio.sleep(2)
+            await asyncio.sleep(2) # 2초 주기 갱신
 
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
-        print(f"Error: {e}")
+        await websocket.send_text(json.dumps({"status": "error", "message": str(e)}))
     finally:
         ssh_client.close()
