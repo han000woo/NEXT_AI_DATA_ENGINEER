@@ -1,9 +1,7 @@
 # NeuroCalc: 손글씨 인식 AI 계산기
 
 > **Deep Learning 기반의 손글씨 숫자 인식 기능을 탑재한 인터랙티브 웹 계산기입니다.** > 사용자가 캔버스에 숫자를 그리면 AI가 실시간으로 인식하고, 동적으로 수식을 구성하여 계산 결과를 보여줍니다.
-
-![Project Preview](https://via.placeholder.com/800x400?text=Project+Screenshot+Here)
-*(여기에 실제 구동 화면 스크린샷이나 GIF를 넣어주세요)*
+<img src="./스크린샷 2025-12-08 213014.png"/>
 
 ## 주요 기능 (Key Features)
 
@@ -18,15 +16,24 @@
 ##  기술 스택 (Tech Stack)
 
 ### Frontend
-- **Framework**: React (TypeScript)
-- **Styling**: CSS Modules, Flexbox Layout
-- **Routing**: React Router DOM
-- **State Management**: React Hooks (useState, useRef)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![CSS Modules](https://img.shields.io/badge/CSS_Modules-000000?style=for-the-badge&logo=css3&logoColor=white)
+![React Router DOM](https://img.shields.io/badge/React_Router_DOM-CA4245?style=for-the-badge&logo=react-router&logoColor=white)
+![React Hooks](https://img.shields.io/badge/React_Hooks-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+
+---
 
 ### Backend
-- **Framework**: Python (FastAPI or Flask) *[사용하신 프레임워크로 수정]*
-- **AI Model**: PyTorch / TensorFlow / Keras *[사용하신 라이브러리로 수정]*
-- **Image Processing**: OpenCV, PIL
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+
+---
+
+### AI / Deep Learning
+![TensorFlow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)
+![Keras](https://img.shields.io/badge/Keras-D00000?style=for-the-badge&logo=keras&logoColor=white)
+
 
 ---
 
