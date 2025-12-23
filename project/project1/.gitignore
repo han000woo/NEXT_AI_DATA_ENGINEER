@@ -1,6 +1,6 @@
-db/.env
-backend/.env
 secrets.toml
+data
+chroma_vector_db 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

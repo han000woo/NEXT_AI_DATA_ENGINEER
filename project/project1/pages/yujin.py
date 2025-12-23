@@ -12,18 +12,18 @@ CURRENT_TARGET = AnswerTarget.PASTOR_A
 SESSION_KEY = f"messages_{CURRENT_TARGET.value}" 
 
 st.set_page_config(
-    page_title="AI 목사님 상담소",
+    page_title=f"AI {CURRENT_TARGET.value}님 상담소",
     page_icon="🙏",
     layout="wide"
 )
 
-st.title("🙏 AI 목사님 상담소")
-st.caption("목사님의 지난 설교 말씀을 기반으로 성도님의 고민에 답해드립니다.")
+st.title(f"🙏 AI {CURRENT_TARGET.value}님 상담소")
+st.caption(f"{CURRENT_TARGET.value}님의 지난 설교 말씀을 기반으로 성도님의 고민에 답해드립니다.")
 
 # --- 2. 사이드바 설정 ---
 with st.sidebar:
     st.header("안내")
-    st.info(f"{CURRENT_TARGET.value} 목사님의 설교 데이터를 기반으로 답변합니다.")
+    st.info(f"{CURRENT_TARGET.value}님의 설교 데이터를 기반으로 답변합니다.")
     
     if st.button("🗑️ 대화 내용 지우기"):
         st.session_state[SESSION_KEY] = [] # 해당 페이지 세션만 삭제
@@ -36,7 +36,7 @@ with st.sidebar:
 # --- 3. 세션 상태 관리 (페이지별 독립 키 사용) ---
 if SESSION_KEY not in st.session_state:
     st.session_state[SESSION_KEY] = [
-        {"role": "assistant", "content": "안녕하십니까 정운성 목사입니다. 오늘도 즐거운 하루 되시길 바랍니다."}
+        {"role": "assistant", "content": f"안녕하십니까 {CURRENT_TARGET.value}입니다. 오늘도 즐거운 하루 되시길 바랍니다."}
     ]
 
 # --- 4. 채팅 화면 그리기 (공통 루프) ---
