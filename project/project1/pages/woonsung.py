@@ -1,15 +1,15 @@
 import streamlit as st
-import time
-import random
-from backend.service import get_response
-from utils.chat_util import stream_data 
-from enums.target import TARGET_CONFIG, AnswerTarget, SermonState
+from backend.chat_service import get_chat_service
+from utils.util import stream_data 
+from enums.target import TARGET_COLLECTION, AnswerTarget, SermonState
 
 # --- 1. 페이지 설정 및 대상 정의 ---
 # 이 페이지의 타겟을 설정합니다. (페이지마다 이 부분을 다르게 설정)
 CURRENT_TARGET = AnswerTarget.PASTOR_B 
 # 페이지별 독립된 메시지 저장을 위한 키 생성
 SESSION_KEY = f"messages_{CURRENT_TARGET.value}" 
+
+pastor = get_chat_service(CURRENT_TARGET)
 
 st.set_page_config(
     page_title=f"AI {CURRENT_TARGET.value}님 상담소",
@@ -60,7 +60,7 @@ if prompt := st.chat_input("여기에 고민을 입력하세요..."):
     with st.chat_message("assistant", avatar="✝️"):
         with st.spinner("목사님의 설교록을 찾아보고 있습니다..."):
             # RAG 로직 호출
-            response_text, (state, source_text) = get_response(prompt, st.session_state[SESSION_KEY], CURRENT_TARGET)
+            response_text, (state, source_text) = pastor.get_response(prompt, st.session_state[SESSION_KEY])
             
             # 3) 스트리밍 출력
             st.write_stream(stream_data(response_text))

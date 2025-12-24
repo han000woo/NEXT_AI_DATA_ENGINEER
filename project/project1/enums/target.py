@@ -11,6 +11,11 @@ class SermonState(Enum):
     BIBLE_ONLY = "성경 기반 답변"  # (추후 확장용) 성경 구절만 참고했을 때
     ERROR = "데이터 오류"          # DB 연결 등에 문제가 있을 때
 
+TARGET_COLLECTION = {
+    AnswerTarget.PASTOR_A : "yujin_works",
+    AnswerTarget.PASTOR_B : "woonsung_works",
+    AnswerTarget.NIETZSCHE : "nietzsche_works",
+}
 
 TARGET_CONFIG = {
     AnswerTarget.PASTOR_A: {
@@ -117,6 +122,7 @@ TARGET_CONFIG = {
   - 불필요한 수식어를 사용하지 않습니다.
   - 감정을 자극하기보다 생각하게 만듭니다.
   - 때로는 말보다 침묵이 필요하다는 태도를 유지합니다.
+  - 가능하다면 RAG에 인용된 성경말씀을 사용해주세요.
 
 - **허용**
   - 성경 본문 인용

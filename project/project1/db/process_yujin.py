@@ -5,6 +5,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 
+from backend.service import extract_bible_ref_with_llm
+
 def preprocess_yujin(pdf_dir, persist_directory) :
     documents = load_yujin_pdf(pdf_dir)
 
@@ -45,6 +47,9 @@ def load_yujin_pdf(pdf_dir) :
             if content:
                 
                 print(f" - [{title}] 로드 완료 ({len(content)}자)")
+                print(f" 🔍 메타데이터 추출 중: {pdf_path.name}")
+                bible_reference = extract_bible_ref_with_llm(pdf_path.name)
+                print(f" LLM 요약 메타데이터 : {bible_reference}")
 
                 doc = Document(
                     page_content=content,
@@ -52,7 +57,8 @@ def load_yujin_pdf(pdf_dir) :
                         "source": pdf_path.name, # 파일명
                         "title": title,          # 설교 제목 (답변 출처 표기에 사용됨)
                         "author": "김유진 목사",  # 필터링용
-                        "category": "sermon"
+                        "category": "sermon",
+                        "bible_ref": bible_reference  # 규격화된 정보 저장 (예: 마:14장)
                     }
                 )
                 documents.append(doc)

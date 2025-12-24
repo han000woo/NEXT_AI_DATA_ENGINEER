@@ -1,4 +1,3 @@
-import re
 import struct
 import zlib
 import olefile
@@ -8,6 +7,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 from dotenv import load_dotenv
+
+from backend.service import extract_bible_ref_with_llm
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = BASE_DIR / "config" / ".env"
@@ -80,8 +81,9 @@ def extract_core_sermon(hwp_path):
 
     return title, full_text.strip()
 
+    
 # --- 3. 문서 로드 및 객체 생성 ---
-def load_woonsung_hwf(hwf_dir): 
+def load_woonsung_hwp(hwf_dir): 
     print(f"📂 HWP 폴더 읽기: {hwf_dir}")
     documents = [] 
     
@@ -92,6 +94,9 @@ def load_woonsung_hwf(hwf_dir):
 
             if content and len(content) > 50: # 너무 짧은 내용은 스킵
                 print(f" - [{title}] 로드 완료 ({len(content)}자)")
+                print(f" 🔍 메타데이터 추출 중: {hwp_path.name}")
+                bible_reference = extract_bible_ref_with_llm(hwp_path.name)
+                print(f" LLM 요약 메타데이터 : {bible_reference}")
 
                 doc = Document(
                     page_content=content,
@@ -99,7 +104,8 @@ def load_woonsung_hwf(hwf_dir):
                         "source": hwp_path.name,
                         "title": title,         
                         "author": "정운성 목사", 
-                        "category": "sermon"
+                        "category": "sermon",
+                        "bible_ref": bible_reference  # 규격화된 정보 저장 (예: 마:14장)
                     }
                 )
                 documents.append(doc)
@@ -113,7 +119,7 @@ def load_woonsung_hwf(hwf_dir):
 # --- 4. 메인 전처리 함수 ---
 def preprocess_woonsung(hwf_dir, persist_directory):
     # 문서 로드
-    documents = load_woonsung_hwf(hwf_dir)
+    documents = load_woonsung_hwp(hwf_dir)
 
     if not documents:
         print("❌ 처리할 문서가 없습니다.")

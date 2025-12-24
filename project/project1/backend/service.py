@@ -2,9 +2,13 @@ import os
 from pathlib import Path
 import openai
 from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from enums.target import TARGET_CONFIG, AnswerTarget, SermonState
 from dotenv import load_dotenv
+
+from utils.util import parse_list
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = BASE_DIR / "config" / ".env"
@@ -15,8 +19,9 @@ load_dotenv(CONFIG_PATH)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
 # --- 2. DB 로드 (전역 변수로 한 번만 로드) ---
-# 경로가 실제 존재하는지 확인하는 로직이 있으면 더 안전합니다.
 DB_PATH = "chroma_vector_db" # 또는 "final_db" 등 실제 폴더명
+
+simple_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0) # 비용 절감을 위해 mini 모델 권장
 
 woonsung_vectorstore = Chroma(
     persist_directory=DB_PATH,
@@ -37,6 +42,8 @@ nietzsche_vectorstore = Chroma(
 )
 
 def get_response(user_input, chat_history, target: AnswerTarget):
+    print("get_response")
+
     """
     return: (답변 텍스트, (상태, 출처_텍스트))
     """
@@ -70,14 +77,19 @@ def get_response(user_input, chat_history, target: AnswerTarget):
     author_name = config.get("name", "상담가")
 
     # --- 4. 검색 (Filter 제거 및 k값 조정) ---
-    # 컬렉션이 이미 분리되어 있으므로 filter 불필요
-    retriever = vectorstore.as_retriever(
-        search_kwargs={
-            "k": 3, # 문맥을 좀 더 풍부하게 하기 위해 2 -> 3으로 증가 추천
-        }
+
+    bible_refs =  expect_query_bible_refs(user_input)
+    docs_meta = vectorstore.similarity_search(
+    user_input,
+    k=3,
+    filter={"bible_ref": {"$in": bible_refs}}
+    )
+    docs_all = vectorstore.similarity_search(
+    user_input,
+    k=3
     )
     
-    docs = retriever.invoke(user_input)
+    docs = get_refined_docs(user_input, docs_meta, docs_all, simple_llm)
     
     # --- 5. 검색 결과 및 출처 정리 ---
     if docs:
@@ -136,3 +148,102 @@ def get_response(user_input, chat_history, target: AnswerTarget):
     )
 
     return response.choices[0].message.content, source_info
+
+def extract_bible_ref_with_simple_llm(filename: str):
+    print("extract_bible_ref_with_simple_llm")
+
+    """
+    simple_LLM을 사용하여 파일명에서 '성경:장' 형태의 메타데이터를 추출합니다.
+    예: '마가복음 14장' -> '마:14장'
+    """
+    
+    prompt = ChatPromptTemplate.from_template("""
+    너는 문자열 변환기다.
+    아래 파일명에서 성경 권 이름과 장만 추출하여
+    아래 규격의 문자열만 출력하라.
+    
+    규격:
+    - 형식: [성경 한글 줄임표]:[장]
+    - 예시:
+      "마가복음 14장" → 마:14장
+      "창세기 1장" → 창:1장
+      "요한복음 3장 16절" → 요:3장
+      추출 불가 → unknown
+    
+    ⚠️ 규칙:
+    - 설명하지 마라
+    - 따옴표, 별표(**), 줄바꿈 없이
+    - 결과 문자열 하나만 출력하라
+    
+    파일명: {filename}
+    """)
+
+    
+    chain = prompt | simple_llm | StrOutputParser()
+    
+    try:
+        # 파일명에서 괄호 안의 텍스트가 핵심이므로 이 부분을 강조해서 전달
+        bible_ref = chain.invoke({"filename": filename})
+        return bible_ref.strip()
+    except Exception as e:
+        print(f"simple_LLM 추출 오류: {e}")
+        return "unknown"
+
+def expect_query_bible_refs(simple_llm, question: str) -> list[str]:
+    print("expect_query_bible_refs")
+
+    prompt = f"""
+    다음 질문과 관련된 성경 권과 장을 JSON 배열로만 출력해라.
+    설명하지 마라.
+
+    예:
+    ["마:14장", "시:23편"]
+    또는
+    []
+
+    질문: {question}
+    """
+    result = simple_llm.invoke(prompt)
+    return parse_list(result)  # 문자열 → 리스트
+
+
+def get_refined_docs(user_input, docs_meta, docs_all, simple_llm):
+    print("get_refined_docs")
+    # 1. 문서 합치기 및 중복 제거
+    all_candidates = docs_meta + docs_all
+    unique_docs = {doc.page_content: doc for doc in all_candidates}.values()
+    
+    # 2. simple_LLM에게 적합성 판단 요청
+    context_text = "\n\n".join([f"[{i+1}] {d.page_content[:500]}..." for i, d in enumerate(unique_docs)])
+    
+    prompt = f"""
+    당신은 설교 데이터 전문가입니다. 아래 질문과 검색된 문서 후보들을 보고, 
+    질문에 답하는 데 정말로 도움이 되는 문서의 번호만 골라주세요.
+    관련이 없는 문서는 과감히 제외하세요.
+    
+    질문: {user_input}
+    
+    후보 문서:
+    {context_text}
+    
+    응답 형식: 관련 있는 문서의 번호만 쉼표로 구분해서 적어주세요 (예: 1, 3). 
+    만약 모든 문서가 관련이 없다면 'None'이라고 적어주세요.
+    """
+    
+    selected_indices = simple_llm.invoke(prompt).content.strip()
+    
+    if "None" in selected_indices or not selected_indices:
+        return list(unique_docs)[:2] # 아무것도 없으면 기본 유사도 상위 2개 반환
+    
+    # 3. 선택된 문서만 필터링해서 반환
+    refined_docs = []
+    try:
+        indices = [int(i.strip()) - 1 for i in selected_indices.split(",")]
+        for idx in indices:
+            if 0 <= idx < len(unique_docs):
+                refined_docs.append(list(unique_docs)[idx])
+    except:
+        return list(unique_docs)[:2]
+
+    print(refined_docs)
+    return refined_docs

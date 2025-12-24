@@ -17,5 +17,5 @@ VECTOR_DB_PATH = BASE_DIR / "chroma_vector_db"
 
 # preprocess_bible(BIBLE_PATH, VECTOR_DB_PATH)
 # preprocess_niche(NICHE_PATH, VECTOR_DB_PATH)
-# preprocess_yujin(YUJIN_PATH, VECTOR_DB_PATH)
+preprocess_yujin(YUJIN_PATH, VECTOR_DB_PATH)
 # preprocess_woonsung(WOONSUNG_PATH, VECTOR_DB_PATH)

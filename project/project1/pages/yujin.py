@@ -2,7 +2,7 @@ import streamlit as st
 import time
 import random
 from backend.service import get_response
-from utils.chat_util import stream_data 
+from utils.util import stream_data 
 from enums.target import TARGET_CONFIG, AnswerTarget, SermonState
 
 # --- 1. 페이지 설정 및 대상 정의 ---
