@@ -53,8 +53,6 @@ def get_video_ids():
 def saving_txts(video_ids):
     jukmun_dir.mkdir(exist_ok=True)
 
-    start_total = time.perf_counter()
-
     for idx, video_id in enumerate(video_ids, 1):
         print(f"\n▶ [{idx}/{len(video_ids)}] {video_id}")
         ytt_api = YouTubeTranscriptApi()

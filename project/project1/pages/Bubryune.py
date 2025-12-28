@@ -50,7 +50,7 @@ if SESSION_KEY not in st.session_state:
 
 # --- 4. 채팅 화면 그리기 (공통 루프) ---
 for message in st.session_state[SESSION_KEY]:
-    avatar = "👤" if message["role"] == "user" else "🪷" #🧘‍♂️
+    avatar = "👤" if message["role"] == "user" else CURRENT_TARGET.getAvatar() #🧘‍♂️
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
         # 과거 기록에 소스가 있다면 출력

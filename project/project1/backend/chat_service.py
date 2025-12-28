@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional
-
+import streamlit as st 
 import openai
 from langchain_chroma import Chroma
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -157,7 +157,132 @@ class BaseChatService(ABC):
         )
 
         return response.choices[0].message.content, source_info
+    
 
+    def get_response(
+        self, user_input: str, chat_history: list
+    ) -> Tuple[str, Tuple[SermonState, str]]:
+        print(f"[{self.author_name}] get_response 시작")
+
+        # 1. 문서 검색 (자식 클래스 로직에 따라 다름)
+        docs_llm, docs_all = self._retrieve_documents(user_input)
+        
+        # 2. 문서 정제 (Reranking)
+        all_candidates = docs_llm + docs_all
+        refined_docs = self._refine_documents(user_input, all_candidates)
+
+        # 3. 프롬프트 구성
+        if refined_docs:
+            context_text = "\n\n".join([doc.page_content for doc in refined_docs])
+            source_str = self._format_source(refined_docs)
+            source_info = (SermonState.FOUND, source_str)
+
+            rag_prompt = (
+                f"다음 지식 베이스(Context)를 바탕으로 답변하세요:\n"
+                f"---\n{context_text}\n---\n"
+                f"지식 베이스 내용을 당신의 사상과 연결하여 해석하세요."
+            )
+        else:
+            context_text = ""
+            source_info = (SermonState.NOT_FOUND, "")
+            rag_prompt = (
+                "관련 문헌을 찾지 못했습니다. 당신의 평소 통찰력에 의존해 답변하세요."
+            )
+
+        # 4. LLM 호출
+        formatted_history = [
+            {"role": msg["role"], "content": msg["content"]}
+            for msg in chat_history[-6:]
+        ]
+
+        system_message = {
+            "role": "system",
+            "content": f"{self.config['system_prompt']}\n\n[RAG 지침]\n{rag_prompt}",
+        }
+
+        response = self.main_llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[system_message]
+            + formatted_history
+            + [{"role": "user", "content": user_input}],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content, source_info
+    
+    def talk_arena(self, topic_or_last_message: str, full_dialogue_context: str) -> str:
+        """
+        아레나 토론 전용 함수
+        """
+        # ---------------------------------------------------------
+        # 1. 문서 검색 (Retrieval) & 2. 정제 (Refine) - 기존과 동일
+        # ---------------------------------------------------------
+        docs_llm, docs_all = self._retrieve_documents(topic_or_last_message)
+        all_candidates = docs_llm + docs_all
+        refined_docs = self._refine_documents(topic_or_last_message, all_candidates)
+    
+        # ---------------------------------------------------------
+        # 3. 프롬프트 구성 (아레나 전용)
+        # ---------------------------------------------------------
+        
+        # [길이 제약 추가] 시스템 프롬프트 레벨에서 짧게 말하도록 강제
+        length_constraint = "답변은 핵심만 담아 3~5문장 내외(200자 이내)로 간결하게 작성하세요. 장황한 설명은 금지합니다."
+    
+        if refined_docs:
+            context_text = "\n\n".join([doc.page_content for doc in refined_docs])
+            rag_instruction = (
+                f"당신은 치열한 사상 검증 토론(Arena) 중입니다.\n"
+                f"아래 지식 베이스를 근거로 상대방을 반박하거나 주장을 펼치세요.\n"
+                f"[지식 베이스]\n---\n{context_text}\n---\n"
+                f"지침: {self.author_name}의 관점을 날카롭게 드러내되, {length_constraint}"
+            )
+        else:
+            rag_instruction = (
+                f"관련 문헌이 없습니다. 당신({self.author_name})의 평소 철학으로 논리에 맞서세요.\n"
+                f"지침: {length_constraint}"
+            )
+    
+        # ---------------------------------------------------------
+        # 4. LLM 호출 (대화 흐름 분기 처리)
+        # ---------------------------------------------------------
+        
+        system_message = {
+            "role": "system",
+            "content": f"{self.config['system_prompt']}\n\n[TOURNAMENT INSTRUCTION]\n{rag_instruction}",
+        }
+    
+        # [핵심 수정] 대화 기록이 비어있는 경우(첫 발언)와 있는 경우를 나눕니다.
+        if not full_dialogue_context.strip():
+            # Case 1: 첫 발언자 (기록 없음) -> 주제에 대해 바로 발언 시작 유도
+            user_prompt = (
+                f"당신이 토론의 첫 번째 발언자입니다.\n"
+                f"주제: '{topic_or_last_message}'\n"
+                f"위 주제에 대해 당신의 입장을 3~5문장으로 명확하게 주장하며 포문을 여세요."
+            )
+        else:
+            # Case 2: 이후 발언자 (기록 있음) -> 흐름 파악 후 반박
+            user_prompt = (
+                f"다음은 현재까지의 토론 기록입니다.\n"
+                f"---\n{full_dialogue_context}\n---\n"
+                f"위 흐름을 파악하고, 상대방의 마지막 말에 대해 반박하거나 의견을 더하세요.\n"
+                f"반드시 3~5문장 내외로 짧게 답변하세요."
+            )
+    
+        user_message_payload = {
+            "role": "user",
+            "content": user_prompt
+        }
+    
+        response = self.main_llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[system_message, user_message_payload],
+            temperature=0.8,
+            presence_penalty=0.5, # 반복 방지를 조금 더 높임
+            # max_tokens=300, # 필요하다면 강제 절삭 (문장이 잘릴 수 있어 프롬프트 제어를 추천)
+        )
+    
+        return response.choices[0].message.content
+    
 
 # ==========================================
 # [자식 클래스 1] 목회자 서비스 (성경 필터링 포함)
@@ -291,6 +416,7 @@ class BubryuneService(BaseChatService):
 # ==========================================
 # [팩토리] 서비스 생성기
 # ==========================================
+@st.cache_resource
 def get_chat_service(target: AnswerTarget) -> BaseChatService:
     if target == AnswerTarget.PASTOR_A:
         return PastorService(target, collection_name="yujin_works")

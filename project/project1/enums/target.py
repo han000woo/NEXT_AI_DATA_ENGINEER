@@ -1,12 +1,21 @@
 from enum import Enum
 
 
+
 class AnswerTarget(Enum):
     PASTOR_A = "김유진 목사"
     PASTOR_B = "정운성 목사"
     NIETZSCHE = "NIETZSCHE"
     BUBRYUNE = "법륜 스님"
 
+    def getAvatar(self):
+        return TargetAvatar[self.name].value
+    
+class TargetAvatar(Enum):
+    PASTOR_A = "✝️"
+    PASTOR_B = "✝️"
+    NIETZSCHE = "🧔🏻‍♂️"
+    BUBRYUNE = "🪷"
 
 class SermonState(Enum):
     FOUND = "데이터 기반 답변"  # 설교집에서 적절한 내용을 찾았을 때
@@ -14,7 +23,7 @@ class SermonState(Enum):
     BIBLE_ONLY = "성경 기반 답변"  # (추후 확장용) 성경 구절만 참고했을 때
     ERROR = "데이터 오류"  # DB 연결 등에 문제가 있을 때
 
-
+    
 TARGET_COLLECTION = {
     AnswerTarget.PASTOR_A: "yujin_works",
     AnswerTarget.PASTOR_B: "woonsung_works",
