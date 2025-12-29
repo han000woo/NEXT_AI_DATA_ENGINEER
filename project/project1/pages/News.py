@@ -2,11 +2,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import streamlit as st
 import asyncio
-import os
-from mcp.client.sse import sse_client
-from mcp.client.session import ClientSession
 from enums.target import AnswerTarget
 from backend.chat_service import get_chat_service
+from backend.mcp_service import get_news_from_mcp
 
 # --- 환경 설정 ---
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -14,37 +12,12 @@ CONFIG_PATH = BASE_DIR / "config" / ".env"
 load_dotenv(CONFIG_PATH)
 # 2. 설정: MCP 서버 주소 & OpenAI 모델
 
-MCP_SERVER_URL = os.getenv("MCP_NEWS_URL", "http://localhost:8000/sse")
-
 st.set_page_config(page_title="Wisdom AI", page_icon="🦉")
 st.title("뉴스 평론")
 st.caption("종교 및 철학가들이 최신 뉴스에 대한 인사이트를 제공합니다.")
 
 targets = list(AnswerTarget)
 reviewers = [get_chat_service(e) for e in targets]
-
-
-# ---------------------------------------------------------
-# [기능 1] MCP 서버에서 뉴스 가져오기 (도구 사용)
-# ---------------------------------------------------------
-async def get_news_from_mcp(search_keyword):
-    """MCP 서버에 접속해서 get_latest_news 도구를 실행함"""
-    try:
-        async with sse_client(MCP_SERVER_URL) as streams:
-            async with ClientSession(streams[0], streams[1]) as session:
-                await session.initialize()
-                
-                # 도구 실행 요청
-                result = await session.call_tool(
-                    "get_latest_news",
-                    arguments={"keyword": search_keyword, "limit": 2}
-                )
-                # 결과 텍스트 반환
-                return result.content[0].text
-            
-    except Exception as e:
-        return f"Error: MCP 서버 연결 실패 ({str(e)})"
-
 
 # ---------------------------------------------------------
 # [UI] 화면 구성

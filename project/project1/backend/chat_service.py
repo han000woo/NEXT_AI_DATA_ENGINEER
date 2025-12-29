@@ -1,4 +1,4 @@
-import os
+import asyncio
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional
@@ -6,11 +6,10 @@ import streamlit as st
 import openai
 from langchain_chroma import Chroma
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 
 # 사용자 정의 모듈 (가정)
+from backend.mcp_service import mcp_save_log
 from enums.target import TARGET_CONFIG, AnswerTarget, SermonState
 from utils.util import parse_list
 
@@ -32,7 +31,7 @@ class BaseChatService(ABC):
     def __init__(self, target: AnswerTarget):
         self.target = target
         self.config = TARGET_CONFIG[target]
-        self.author_name = self.config.get("name", "AI")
+        self.author_name = self.target.value
 
         # LLM 모델 설정
         self.main_llm = openai  # OpenAI Client directly
@@ -113,6 +112,10 @@ class BaseChatService(ABC):
     ) -> Tuple[str, Tuple[SermonState, str]]:
         print(f"[{self.author_name}] get_response 시작")
 
+        print(f"[{self.author_name}] 사용자 고민 저장")
+        result_message = asyncio.run(mcp_save_log(user_input, self.author_name))
+        print(result_message)
+
         # 1. 문서 검색 (자식 클래스 로직에 따라 다름)
         docs_llm, docs_all = self._retrieve_documents(user_input)
         
@@ -156,6 +159,7 @@ class BaseChatService(ABC):
             + [{"role": "user", "content": user_input}],
             temperature=0.7,
         )
+        
 
         return response.choices[0].message.content, source_info
     

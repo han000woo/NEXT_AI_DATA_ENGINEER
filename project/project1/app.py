@@ -12,6 +12,7 @@ Nietzsche = st.Page("pages/Nietzsche.py", title="Nietzsche", icon=":material/psy
 Bubryune = st.Page("pages/Bubryune.py", title="Bubryune", icon=":material/temple_buddhist:")
 Arena = st.Page("pages/Arena.py", title="Arena", icon=":material/sports_martial_arts:")
 News = st.Page("pages/News.py", title="News", icon=":material/news:")
+DataAnalysis = st.Page("pages/DataAnalysis.py", title="데이터 분석", icon=":material/dataset:")
 manual1 = st.Page("pages/mannual1.py", title="가상환경구축 메뉴얼", icon=":material/settings:")
 manual2 = st.Page("pages/mannual2.py", title="Streamlit 메뉴얼", icon=":material/settings:")
 manual3 = st.Page("pages/mannual3.py", title="Diagram", icon=":material/settings:")
@@ -22,7 +23,7 @@ pg = st.navigation(
         "Christian": [pastor_jung, pastor_kim],
         "Buddhism": [Bubryune],
         "Philosophy": [Nietzsche],
-        "Contents": [Arena, News],
+        "Contents": [Arena, News, DataAnalysis],
         "Settings" : [manual1,manual2,manual3]
     }
 )
