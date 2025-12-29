@@ -5,7 +5,6 @@ from backend.chat_service import get_chat_service
 from enums.target import AnswerTarget
 from utils.util import stream_data
 import streamlit as st
-import time
 from backend.chat_service import get_chat_service
 from enums.target import AnswerTarget
 from utils.util import stream_data
@@ -35,12 +34,18 @@ def build_context_string(dialogue_history):
         context_text += f"{turn['speaker']}: {turn['content']}\n"
     return context_text
 
+def reset_conversation():
+    # 세션 스테이트의 대화 기록을 비웁니다.
+    st.session_state.conversation_log = []
+    # 문맥이나 다른 저장소도 필요하다면 여기서 같이 비웁니다.
+    st.session_state.full_dialogue_context = []
+    
 # --- [3] 세션 상태 초기화 (통합된 로그 하나만 사용) ---
 if "conversation_log" not in st.session_state:
     st.session_state.conversation_log = [] # 전체 대화 기록 (화면 표시용)
 
 # --- [4] UI: 선수 선택 영역 ---
-st.title("사상 토론 아레나")
+st.title("사상 토론")
 st.caption("두 거인의 사상이 충돌하는 현장을 목격하세요.")
 
 col_left, col_mid, col_right = st.columns([1, 0.1, 1])
@@ -89,7 +94,7 @@ with col_input:
     initial_topic = st.text_input("토론 주제", placeholder="예: 돈이 많으면 행복한가?", label_visibility="collapsed")
 
 with col_btn:
-    start_btn = st.button("대화 시작", type="primary", use_container_width=True, disabled=not initial_topic)
+    start_btn = st.button("대화 시작", type="primary", use_container_width=True, disabled=not initial_topic,on_click=reset_conversation)
 
 # --- [7] 토론 로직 실행 ---
 if start_btn:
@@ -118,7 +123,7 @@ if start_btn:
     # ----------------------------------------------------
     # [Loop] 티키타카 시작
     # ----------------------------------------------------
-    conversation_rounds = 2
+    conversation_rounds = 1
     
     for i in range(conversation_rounds):
         

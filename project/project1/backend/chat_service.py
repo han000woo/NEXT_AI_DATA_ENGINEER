@@ -107,57 +107,6 @@ class BaseChatService(ABC):
         unique_sources = list(set(sources))
         return f"📖 {self.author_name} 인용: {', '.join(unique_sources)}"
 
-    def get_response(
-        self, user_input: str, chat_history: list
-    ) -> Tuple[str, Tuple[SermonState, str]]:
-        print(f"[{self.author_name}] get_response 시작")
-
-        # 1. 문서 검색 (자식 클래스 로직에 따라 다름)
-        docs_llm, docs_all = self._retrieve_documents(user_input)
-        
-        # 2. 문서 정제 (Reranking)
-        all_candidates = docs_llm + docs_all
-        refined_docs = self._refine_documents(user_input, all_candidates)
-
-        # 3. 프롬프트 구성
-        if refined_docs:
-            context_text = "\n\n".join([doc.page_content for doc in refined_docs])
-            source_str = self._format_source(refined_docs)
-            source_info = (SermonState.FOUND, source_str)
-
-            rag_prompt = (
-                f"다음 지식 베이스(Context)를 바탕으로 답변하세요:\n"
-                f"---\n{context_text}\n---\n"
-                f"지식 베이스 내용을 당신의 사상과 연결하여 해석하세요."
-            )
-        else:
-            context_text = ""
-            source_info = (SermonState.NOT_FOUND, "")
-            rag_prompt = (
-                "관련 문헌을 찾지 못했습니다. 당신의 평소 통찰력에 의존해 답변하세요."
-            )
-
-        # 4. LLM 호출
-        formatted_history = [
-            {"role": msg["role"], "content": msg["content"]}
-            for msg in chat_history[-6:]
-        ]
-
-        system_message = {
-            "role": "system",
-            "content": f"{self.config['system_prompt']}\n\n[RAG 지침]\n{rag_prompt}",
-        }
-
-        response = self.main_llm.chat.completions.create(
-            model="gpt-4o",
-            messages=[system_message]
-            + formatted_history
-            + [{"role": "user", "content": user_input}],
-            temperature=0.7,
-        )
-
-        return response.choices[0].message.content, source_info
-    
 
     def get_response(
         self, user_input: str, chat_history: list
@@ -283,6 +232,50 @@ class BaseChatService(ABC):
     
         return response.choices[0].message.content
     
+    def review_news(self, news_text, keyword) :
+        docs_llm, docs_all = self._retrieve_documents(news_text)        
+        all_candidates = docs_llm + docs_all
+        refined_docs = self._refine_documents(news_text, all_candidates)
+
+        # 3. 프롬프트 구성
+        if refined_docs:
+            context_text = "\n\n".join([doc.page_content for doc in refined_docs])
+            source_str = self._format_source(refined_docs)
+            source_info = (SermonState.FOUND, source_str)
+            length_constraint = "답변은 핵심만 담아 3~5문장 내외(200자 이내)로 간결하게 작성하세요. 장황한 설명은 금지합니다."
+            rag_prompt = (
+                f"당신은 뉴스에 대해 자신의 생각을 말해야 합니다. 다음 지식 베이스(Context)를 바탕으로 답변하세요:\n"
+                f"---\n{context_text}\n---\n"
+                f"지식 베이스 내용을 당신의 사상과 연결하여 해석하세요."
+                f"{self.author_name}의 관점으로 바라봐주세요."
+                f"[news text]"
+                f"{news_text}"
+                f"{length_constraint}"
+            )
+        else:
+            context_text = ""
+            source_info = (SermonState.NOT_FOUND, "")
+            rag_prompt = (
+                f"당신은 뉴스에 대해 자신의 생각을 말해야 합니다. \n"
+                f"{self.author_name}의 관점으로 바라봐주세요."
+                f"[news text]"
+                f"{news_text}"
+            )
+
+        system_message = {
+            "role": "system",
+            "content": f"{self.config['system_prompt']}\n\n[RAG 지침]\n{rag_prompt}",
+        }
+
+        response = self.main_llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[system_message]
+            + [{"role": "user", "content": f"해당 키워드에 대한 뉴스를 검색했습니다. {keyword} 당신의 역할과 기반지식대로 리뷰해주세요"}],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content, source_info
+    
 
 # ==========================================
 # [자식 클래스 1] 목회자 서비스 (성경 필터링 포함)
@@ -398,7 +391,7 @@ class BubryuneService(BaseChatService):
         )
 
     def _get_meta_key(self) -> str:
-        return "chapter_title"  # 니체 저서 인용 키
+        return "source"  # 법륜스님 저서 인용 키
 
     def _retrieve_documents(self, user_input: str) -> Tuple[List, List]:
         # 법륜스님은 단순 검색만 수행

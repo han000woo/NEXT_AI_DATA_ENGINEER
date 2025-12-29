@@ -52,6 +52,6 @@ def delete_tables(collection_name) :
     client.delete_collection(collection_name)
     print(f"🗑️ 컬렉션 삭제 완료: {collection_name}")
 
-# delete_tables("yujin_works")
+# delete_tables("bubryune_works")
 check_tables()
 # select_by_bible_ref("woonsung_works","마")

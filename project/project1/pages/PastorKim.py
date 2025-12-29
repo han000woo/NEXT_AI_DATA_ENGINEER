@@ -1,6 +1,4 @@
 import streamlit as st
-import time
-import random
 from backend.chat_service import get_chat_service
 from utils.util import stream_data 
 from enums.target import TARGET_CONFIG, AnswerTarget, SermonState

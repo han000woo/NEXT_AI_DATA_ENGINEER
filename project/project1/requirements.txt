@@ -1,0 +1,15 @@
+streamlit
+openai
+langchain-openai
+langchain-chroma
+langchain-core
+langchain-text-splitters
+langchain-community
+python-dotenv
+youtube-transcript-api
+yt-dlp
+olefile
+PyMuPDF
+pysqlite3-binary
+graphviz
+mcp

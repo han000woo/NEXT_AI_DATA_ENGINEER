@@ -76,6 +76,7 @@ if prompt := st.chat_input("여기에 고민을 입력하세요..."):
             st.write_stream(stream_data(response_text))
             
             # 4) 출처 표시 (즉시 보여주기용)
+            # print(state)
             if state == SermonState.FOUND:
                 # st.success("조건 통과: FOUND 상태입니다.") # 디버깅 완료 후 주석 처리
                 with st.expander("참조한 법문 보기"):

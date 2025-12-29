@@ -4,6 +4,7 @@ from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.document_loaders import DirectoryLoader, TextLoader
+from langchain_core.documents import Document
 from openai import OpenAI
 from youtube_transcript_api import YouTubeTranscriptApi
 import yt_dlp
@@ -147,17 +148,46 @@ def summarize_bubryune_data():
 
 
 def preprocess_bubryune(bub_dir, persist_directory):
+    print(f"📂 '{bub_dir}' 폴더에서 법륜스님 설교 데이터를 로드합니다...")
     # 문서 로드
-    documents = DirectoryLoader(
-        bub_dir,
-        glob="*.txt",
-        loader_cls=TextLoader,
-        loader_kwargs={"encoding": "utf-8"}, 
-    ).load()
+    # documents = DirectoryLoader(
+    #     bub_dir,
+    #     glob="*.txt",
+    #     loader_cls=TextLoader,
+    #     loader_kwargs={"encoding": "utf-8"}, 
+    # ).load()
     # print(documents)
-    if not documents:
+    documents = [] 
+    files = list(Path(bub_dir).glob("*.txt"))
+
+    # if not documents:
+    if not files :
         print("❌ 처리할 문서가 없습니다.")
         return
+    
+    for file_path in files:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # 파일명(확장자 제외)을 제목으로 사용
+            title = file_path.stem 
+            print("즉문즉설 "+file_path.name[:3]+"강")
+            doc = Document(
+                page_content=content,
+                metadata={
+                    "source": "즉문즉설"+file_path.name[:3]+"강",      # 파일명 (예: sermon_01.txt)
+                    "title": title,                # 제목 (예: sermon_01)
+                    "author": "법륜스님",           # 작성자 고정
+                    "category": "sermon"  # 카테고리 구분용
+                }
+            )
+            documents.append(doc)
+            
+        except Exception as e:
+            print(f"⚠️ 파일 로드 실패 ({file_path.name}): {e}")
+    
+    print(f"✅ 총 {len(documents)}개의 설교 문서를 로드했습니다.")
 
     # 텍스트 분할
     text_splitter = RecursiveCharacterTextSplitter(

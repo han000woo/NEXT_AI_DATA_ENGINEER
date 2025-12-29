@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # 1. 뉴스 정보원 (MCP 서버)
+  news-mcp:
+    build: ./mcp-news
+    ports:
+      - "8000:8000"
+    networks:
+      - wisdom-net
+
+  # 2. 메인 상담소 (Streamlit 앱)
+  wisdom-app:
+    build: ./project1
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./project1:/app
+    environment:
+      - MCP_NEWS_URL=http://news-mcp:8000/sse  # 뉴스 서버 주소 전달
+    depends_on:
+      - news-mcp
+    networks:
+      - wisdom-net
+
+networks:
+  wisdom-net:
