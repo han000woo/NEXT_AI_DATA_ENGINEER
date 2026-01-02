@@ -9,7 +9,7 @@ home_page = st.Page("pages/Home.py", title="Home", icon=":material/home:", defau
 pastor_jung = st.Page("pages/PastorJung.py", title="정운성 목사님", icon=":material/volunteer_activism:")
 pastor_kim = st.Page("pages/PastorKim.py", title="김유진 목사님", icon=":material/volunteer_activism:")
 Nietzsche = st.Page("pages/Nietzsche.py", title="Nietzsche", icon=":material/psychology:")
-Bubryune = st.Page("pages/Bubryune.py", title="Bubryune", icon=":material/temple_buddhist:")
+Bubryune = st.Page("pages/Bubryune.py", title="법륜 스님", icon=":material/temple_buddhist:")
 Arena = st.Page("pages/Arena.py", title="Arena", icon=":material/sports_martial_arts:")
 News = st.Page("pages/News.py", title="News", icon=":material/news:")
 DataAnalysis = st.Page("pages/DataAnalysis.py", title="데이터 분석", icon=":material/dataset:")

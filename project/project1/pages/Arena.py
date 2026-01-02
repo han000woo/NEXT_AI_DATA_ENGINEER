@@ -96,6 +96,13 @@ with col_input:
 with col_btn:
     start_btn = st.button("대화 시작", type="primary", use_container_width=True, disabled=not initial_topic,on_click=reset_conversation)
 
+conversation_rounds = st.sidebar.slider(
+        "대화 턴 수 설정",
+        min_value=1,
+        max_value=10,
+        value=2  # 기본값
+    )
+
 # --- [7] 토론 로직 실행 ---
 if start_btn:
     # 1. 초기화
@@ -123,7 +130,7 @@ if start_btn:
     # ----------------------------------------------------
     # [Loop] 티키타카 시작
     # ----------------------------------------------------
-    conversation_rounds = 1
+    # 슬라이더로 값 받기
     
     for i in range(conversation_rounds):
         

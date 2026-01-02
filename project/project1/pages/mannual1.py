@@ -32,7 +32,7 @@ yt-dlp
 olefile
 
 ### PDF 파일 파싱 
-PyMuPDF
+fitz
 pysqlite3-binary
 
 ### MCP Client
@@ -60,6 +60,39 @@ with os_tab1:
 
     st.write("4️⃣ **requirements.txt**")
     st.code(requirements_txt)
+    st.divider()
+    st.subheader("Docker 설정 방법")
+    st.write("1️⃣ **도커파일 생성**")
+    st.write("streamlit server")
+    st.code("""
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+""")
+    
+    st.write("mcp server")
+    st.code("""
+FROM python:3.10-slim
+
+WORKDIR /app
+RUN pip install fastmcp feedparser uvicorn mysql-connector-python python-dotenv openai
+
+COPY server.py .
+
+# 서버 실행 명령어 (SSE 모드)
+CMD ["python", "server.py"]
+""")
+    
+    st.write("2️⃣ **docker-compose 실행**")
+    st.code("""
+docker-compose up
+""")
 with os_tab2:
     st.subheader("macOS / Linux 설정 방법")
     st.write("1️⃣ **가상환경 생성**")
@@ -71,5 +104,38 @@ with os_tab2:
     st.code("pip install -r requirements.txt", language="bash")
     st.write("4️⃣ **requirements.txt**")
     st.code(requirements_txt)
+    st.divider()
+    st.subheader("Docker 설정 방법")
+    st.write("1️⃣ **도커파일 생성**")
+    st.write("streamlit server")
+    st.code("""
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+""")
+    
+    st.write("mcp server")
+    st.code("""
+FROM python:3.10-slim
+
+WORKDIR /app
+RUN pip install fastmcp feedparser uvicorn mysql-connector-python python-dotenv openai
+
+COPY server.py .
+
+# 서버 실행 명령어 (SSE 모드)
+CMD ["python", "server.py"]
+""")
+    
+    st.write("2️⃣ **docker-compose 실행**")
+    st.code("""
+docker-compose up
+""")
 st.divider()
 st.warning("**참고:** 가상환경을 비활성화하려면 터미널에 `deactivate`를 입력하세요.")

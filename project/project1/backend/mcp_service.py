@@ -4,8 +4,7 @@ import os
 
 
 MCP_SERVER_URL = os.getenv("MCP_NEWS_URL", "http://localhost:8000/sse")
-
-
+print(f"🔗 접속 시도 중인 MCP 서버 주소: {MCP_SERVER_URL}") # 로그로 확인 가능
 # ---------------------------------------------------------
 # 서버에서 뉴스 가져오기 (도구 사용)
 # ---------------------------------------------------------
@@ -56,7 +55,7 @@ async def mcp_save_log(user_input: str, mento_name: str):
                 # 3. 결과 반환 (서버에서 보낸 "✅ 저장 완료" 메시지 받기)
                 # result는 CallToolResult 객체이며, 실제 텍스트는 content 리스트 안에 있음
                 output_text = result.content[0].text
-                # print(f"📬 서버 응답: {output_text}")
+                print(f"📬 서버 응답: {output_text}")
                 return output_text
 
     except Exception as e:

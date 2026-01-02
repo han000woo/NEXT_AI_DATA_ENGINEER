@@ -51,6 +51,9 @@ class BaseChatService(ABC):
         """출처 표시를 위한 메타데이터 키 (title, source, full_ref 등)"""
         pass
 
+    def _get_avartar(self) -> str : 
+        return self.target.getAvatar()
+
     def _retrieve_documents(self, user_input: str) -> Tuple[List, List]:
         """
         기본 검색 로직.
@@ -128,7 +131,7 @@ class BaseChatService(ABC):
             context_text = "\n\n".join([doc.page_content for doc in refined_docs])
             source_str = self._format_source(refined_docs)
             source_info = (SermonState.FOUND, source_str)
-
+            print(source_info)
             rag_prompt = (
                 f"다음 지식 베이스(Context)를 바탕으로 답변하세요:\n"
                 f"---\n{context_text}\n---\n"
@@ -280,6 +283,48 @@ class BaseChatService(ABC):
 
         return response.choices[0].message.content, source_info
     
+    def analysis_data(self, data) :
+        docs_llm, docs_all = self._retrieve_documents(data)        
+        all_candidates = docs_llm + docs_all
+        refined_docs = self._refine_documents(data, all_candidates)
+    
+        # 3. 프롬프트 구성
+        if refined_docs:
+            context_text = "\n\n".join([doc.page_content for doc in refined_docs])
+            source_str = self._format_source(refined_docs)
+            source_info = (SermonState.FOUND, source_str)
+            rag_prompt = (
+                f"당신은 전달 받은 데이터를 보고 분석해주시길 바랍니다. 데이터가 사람들의 고민 키워드인경우 상위 키워드를 위주로 위로의 말을 해주세요:\n"
+                f"---\n{context_text}\n---\n"
+                f"지식 베이스 내용을 당신의 사상과 연결하여 해석하세요."
+                f"{self.author_name}의 관점으로 바라봐주세요."
+                f"[news text]"
+                f"{data}"
+            )
+        else:
+            context_text = ""
+            source_info = (SermonState.NOT_FOUND, "")
+            rag_prompt = (
+                f"당신은 전달 받은 데이터를 보고 분석해주시길 바랍니다. 데이터가 사람들의 고민 키워드인경우 상위 키워드를 위주로 위로의 말을 해주세요:\n"
+                f"{self.author_name}의 관점으로 바라봐주세요."
+                f"[data]"
+                f"{data}"
+            )
+
+        system_message = {
+            "role": "system",
+            "content": f"{self.config['system_prompt']}\n\n[RAG 지침]\n{rag_prompt}",
+        }
+        
+        response = self.main_llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[system_message]
+            + [{"role": "user", "content": f"당신은 우리 웹사이트에 대한 자료를 받았습니다. {data} 당신의 역할과 기반지식대로 리뷰해주세요. 살짝 더 친절하게 위로하는 말로 말해주세요. 100자 이내로 작성해주세요",}],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content, source_info
+    
 
 # ==========================================
 # [자식 클래스 1] 목회자 서비스 (성경 필터링 포함)
@@ -327,15 +372,15 @@ class PastorService(BaseChatService):
         # 1. 성경 구절 추출
         query_to_vector_search = self._query_to_vector_search(user_input)
 
-        print(f"query_to_vector_search {query_to_vector_search}")
+        # print(f"query_to_vector_search {query_to_vector_search}")
         docs_llm = []
         # 만약 참조한 성경이 검색이 된다면
         if query_to_vector_search:
-            print(f"🔍 성경 필터 적용: {query_to_vector_search}")
+            # print(f"🔍 성경 필터 적용: {query_to_vector_search}")
             docs_llm = self.vectorstore.similarity_search(user_input, k=3)
 
         docs_all = self.vectorstore.similarity_search(user_input, k=3)
-        print(docs_llm)
+        # print(docs_llm)
         
         return docs_llm, docs_all
 

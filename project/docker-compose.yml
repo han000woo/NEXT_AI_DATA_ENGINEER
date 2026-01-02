@@ -1,11 +1,41 @@
 version: '3.8'
 
 services:
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: wintop0410@
+      MYSQL_DATABASE: counseling_db
+    volumes:
+      - db_data:/var/lib/mysql  # 데이터 영구 저장을 위한 볼륨
+    networks:
+      - wisdom-net
+    healthcheck: # DB가 켜졌는지 확인 (Swarm에서 중요)
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # 1. 뉴스 정보원 (MCP 서버)
   news-mcp:
     build: ./mcp-news
+    env_file:
+      - ./mcp-news/.env
     ports:
       - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=
+      - DB_HOST=db             # 중요! 127.0.0.1이 아니라 서비스명 'db' 사용
+      - DB_USER=root
+      - DB_PASSWORD=wintop0410@
+      - DB_NAME=counseling_db
+
+    depends_on:
+      db:
+        condition: service_healthy
+
     networks:
       - wisdom-net
 
@@ -25,3 +55,6 @@ services:
 
 networks:
   wisdom-net:
+
+volumes:
+  db_data:

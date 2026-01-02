@@ -13,3 +13,4 @@ PyMuPDF
 pysqlite3-binary
 graphviz
 mcp
+plotly

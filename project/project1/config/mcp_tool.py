@@ -25,5 +25,4 @@ tools_schema = [
             }
         }
     },
-    # 필요한 경우 search_past_logs 같은 다른 도구도 여기에 추가
 ]
