@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Literal
+from typing import List, Optional, Literal, Union
 
 # 로그 데이터 구조 정의
 class LogSchema(BaseModel):
@@ -27,3 +27,23 @@ class DynamicLogRequest(BaseModel):
     table_name: str = Field(..., description="로그의 주제 (예: stock_trades)")
     count: int = Field(default=5, description="생성할 로그 개수")
     columns: List[ColumnDefinition] = Field(..., description="생성할 컬럼 목록")
+
+
+# 컬럼의 세부 설정 (사용자가 UI에서 입력할 내용)
+class CustomColumnDefinition(BaseModel):
+    name: str
+    type: Literal['int', 'float', 'string', 'date', 'category', 'uuid']
+    min_value: Optional[Union[float, str]] = None 
+    max_value: Optional[Union[float, str]] = None
+    options: Optional[List[str]] = None
+
+# 스키마 저장용 모델
+class SchemaConfig(BaseModel):
+    schema_name: str
+    description: Optional[str] = ""
+    columns: List[CustomColumnDefinition]
+
+# 데이터 생성 요청 모델
+class GenerateCustomRequest(BaseModel):
+    count: int = 10
+    config: SchemaConfig

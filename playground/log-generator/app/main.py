@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
-from app.schemas.models import GenerateRequest, LogSchema
+from app.schemas.models import GenerateCustomRequest, GenerateRequest, LogSchema, SchemaConfig
+from app.services.custom_manager import CustomLogGenerator, SchemaManager
 from app.services.generator import LogGeneratorService
 from typing import List
 
@@ -28,3 +29,15 @@ def generate_by_prompt(req: PromptRequest):
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
  
+@app.post("/schema/save")
+def save_schema(config: SchemaConfig):
+    return SchemaManager.save_schema(config)
+
+@app.get("/schema/list")
+def list_schemas():
+    return SchemaManager.load_schemas()
+
+@app.post("/generate-custom")
+def generate_custom(req: GenerateCustomRequest):
+    data = CustomLogGenerator.generate(req.config, req.count)
+    return {"schema": req.config.schema_name, "data": data}
