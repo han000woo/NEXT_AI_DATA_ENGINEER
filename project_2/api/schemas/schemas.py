@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 # 상품 스키마
@@ -10,6 +10,9 @@ class ProductBase(BaseModel):
     image_url: Optional[str] = None
 
 class ProductCreate(ProductBase):
+    pass
+
+class ProductUpdate(ProductBase):
     pass
 
 class Product(ProductBase):
@@ -29,3 +32,6 @@ class Order(OrderCreate):
     created_at: datetime
     class Config:
         from_attributes = True
+
+class BulkOrderCreate(BaseModel) :
+    orders: List[OrderCreate]
