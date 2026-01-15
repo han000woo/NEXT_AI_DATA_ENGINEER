@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
-
+from constants import PRODUCT_CATEGORIES # 상수 임포트
 from services import get_api
 
 api = get_api()
@@ -84,12 +84,25 @@ with tab2:
                 new_name = st.text_input("Product Name", value=target_product['name'])
                 new_desc = st.text_area("Description", value=target_product['description'] or "")
                 
-                c1, c2 = st.columns(2)
+                c1, c2 ,c3 = st.columns(3)
                 with c1:
                     new_price = st.number_input("Price", min_value=0.0, step=100.0, 
                                               value=float(target_product['price']), format="%.0f")
                 with c2:
                     new_img_url = st.text_input("Image URL", value=target_product['image_url'] or "")
+
+                with c3: 
+                    try:
+                        default_index = PRODUCT_CATEGORIES.index(target_product['category'])
+                    except ValueError:
+                        default_index = 0
+
+                    new_category = st.selectbox(
+                        "Select a category to edit",
+                        options=list(PRODUCT_CATEGORIES),
+                        index=default_index
+                    )
+                
                 
                 # 버튼 레이아웃: 수정(Blue) / 삭제(Red)
                 col_update, col_delete = st.columns([4, 1])
@@ -105,6 +118,7 @@ with tab2:
                         "name": new_name,
                         "description": new_desc,
                         "price": new_price,
+                        "category" : new_category,
                         "image_url": new_img_url if new_img_url else None
                     }
                     if api.product.update(target_product['id'], update_data):

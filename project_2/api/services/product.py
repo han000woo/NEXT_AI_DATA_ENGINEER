@@ -22,6 +22,7 @@ def update_product(db: Session, product_id: int, product_data: schemas.ProductUp
         db_product.description = product_data.description
         db_product.price = product_data.price
         db_product.image_url = product_data.image_url
+        db_product.category = product_data.category
         
         db.commit()
         db.refresh(db_product)

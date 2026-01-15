@@ -5,6 +5,7 @@ from datetime import datetime
 # 상품 스키마
 class ProductBase(BaseModel):
     name: str
+    category : str = "Etc"
     description: Optional[str] = None
     price: float
     image_url: Optional[str] = None

@@ -8,6 +8,7 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     description = Column(String)
+    category = Column(String, default="Etc")
     price = Column(Float)
     image_url = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
